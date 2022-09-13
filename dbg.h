@@ -29,6 +29,23 @@ License (MIT):
 #ifndef DBG_MACRO_DBG_H
 #define DBG_MACRO_DBG_H
 
+#define FILE_PATH ""
+
+#ifdef DBG_SHOW_FILE_PATH
+#define FILE_PATH __FILE__
+#endif
+
+#define sdbg(x,i,j)\
+    cout<<"["<<FILE_PATH<<":"; \
+    cout<<__LINE__<<" ("<<__func__<<")] "<<\
+    DBG_STRINGIFY(x)<<" = ";dbg::pretty_print(cout,x,i,j); \
+    cout<<" ("<<DBG_TYPE_NAME(x)<<")\n";
+
+
+#ifndef DBG_MAX_ELEMS
+#define DBG_MAX_ELEMS 10
+#endif
+
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 #define DBG_MACRO_UNIX
 #elif defined(_MSC_VER)
@@ -39,18 +56,18 @@ License (MIT):
 #pragma message("WARNING: the 'dbg.h' header is included in your code base")
 #endif  // DBG_MACRO_NO_WARNING
 
-#include <algorithm>
-#include <chrono>
-#include <ctime>
-#include <iomanip>
-#include <ios>
-#include <iostream>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <tuple>
-#include <type_traits>
-#include <vector>
+// #include <algorithm>
+// #include <chrono>
+// #include <ctime>
+// #include <iomanip>
+// #include <ios>
+// #include <iostream>
+// #include <memory>
+// #include <sstream>
+// #include <string>
+// #include <tuple>
+// #include <type_traits>
+// #include <vector>
 
 #ifdef DBG_MACRO_UNIX
 #include <unistd.h>
@@ -701,7 +718,7 @@ inline typename std::enable_if<detail::is_container<const Container&>::value,
 pretty_print(std::ostream& stream, const Container& value) {
   stream << "{";
   const size_t size = detail::size(value);
-  const size_t n = std::min(size_t{10}, size);
+  const size_t n = std::min(size_t{DBG_MAX_ELEMS}, size);
   size_t i = 0;
   using std::begin;
   using std::end;
@@ -718,6 +735,38 @@ pretty_print(std::ostream& stream, const Container& value) {
   }
 
   stream << "}";
+  return true;
+}
+
+template <typename Container>
+inline typename std::enable_if<detail::is_container<const Container&>::value,
+                               bool>::type
+pretty_print(std::ostream& stream, const Container& value, size_t first, size_t last = -1) {
+  stream << "{";
+  const size_t size = detail::size(value);
+  size_t n = std::min(size_t{DBG_MAX_ELEMS}, size);
+  if(last!=-1) n=std::min(size, last+1);
+  size_t i = 0;
+  if(first!=-1) i = first;
+  using std::begin;
+  using std::end;
+  for (auto it = begin(value)+i; it != end(value) && i < n; ++it, ++i) {
+    pretty_print(stream, *it);
+    if (i != n - 1) {
+      stream << ", ";
+    }
+  }
+
+  if (size > n) {
+    stream << ", ...";
+    stream << " size:" << size;
+  }
+
+  stream << "}";
+
+  if(last >= size){
+      stream << "  ---->  index " << last << " out of bounds\n";
+  }
   return true;
 }
 
@@ -741,7 +790,7 @@ class DebugOutput {
 
   DebugOutput(const char* filepath, int line, const char* function_name)
       : m_use_colorized_output(isColorizedOutputEnabled()) {
-    std::string path = filepath;
+          std::string path = filepath;
     const std::size_t path_length = path.length();
     if (path_length > MAX_PATH_LENGTH) {
       path = ".." + path.substr(path_length - MAX_PATH_LENGTH, MAX_PATH_LENGTH);
@@ -889,7 +938,7 @@ auto identity(T&&, U&&... u) -> last_t<U...> {
 #define DBG_TYPE_NAME(x) dbg::type_name<decltype(x)>()
 
 #define dbg(...)                                    \
-  dbg::DebugOutput(__FILE__, __LINE__, __func__)    \
+  dbg::DebugOutput(FILE_PATH, __LINE__, __func__)    \
       .print({DBG_MAP(DBG_STRINGIFY, __VA_ARGS__)}, \
              {DBG_MAP(DBG_TYPE_NAME, __VA_ARGS__)}, __VA_ARGS__)
 #else
