@@ -36,10 +36,10 @@ License (MIT):
 #endif
 
 #define sdbg(x,i,j)\
-    cout<<"["<<FILE_PATH<<":"; \
-    cout<<__LINE__<<" ("<<__func__<<")] "<<\
-    DBG_STRINGIFY(x)<<" = ";dbg::pretty_print(cout,x,i,j); \
-    cout<<" ("<<DBG_TYPE_NAME(x)<<")\n";
+    cerr<<"["<<FILE_PATH<<":"; \
+    cerr<<__LINE__<<" ("<<__func__<<")] "<<\
+    DBG_STRINGIFY(x)<<" = ";dbg::pretty_print(cerr,x,i,j); \
+    cerr<<" ("<<DBG_TYPE_NAME(x)<<")\n";
 
 
 #ifndef DBG_MAX_ELEMS
@@ -56,6 +56,7 @@ License (MIT):
 #pragma message("WARNING: the 'dbg.h' header is included in your code base")
 #endif  // DBG_MACRO_NO_WARNING
 
+#include <bits/stdc++.h>
 // #include <algorithm>
 // #include <chrono>
 // #include <ctime>
@@ -81,10 +82,10 @@ License (MIT):
 #define DBG_MACRO_CXX_STANDARD 11
 #endif
 
-#if DBG_MACRO_CXX_STANDARD >= 17
-#include <optional>
-#include <variant>
-#endif
+// #if DBG_MACRO_CXX_STANDARD >= 17
+// #include <optional>
+// #include <variant>
+// #endif
 
 namespace dbg {
 
