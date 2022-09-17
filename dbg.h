@@ -1,46 +1,29 @@
-/*****************************************************************************
-
-                                dbg(...) macro
-
-License (MIT):
-
-  Copyright (c) 2019 David Peter <mail@david-peter.de>
-
-  Permission is hereby granted, free of charge, to any person obtaining a copy
-  of this software and associated documentation files (the "Software"), to
-  deal in the Software without restriction, including without limitation the
-  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-  sell copies of the Software, and to permit persons to whom the Software is
-  furnished to do so, subject to the following conditions:
-
-  The above copyright notice and this permission notice shall be included in
-  all copies or substantial portions of the Software.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-  SOFTWARE.
-
-*****************************************************************************/
 
 #ifndef DBG_MACRO_DBG_H
 #define DBG_MACRO_DBG_H
 
-#define FILE_PATH ""
+// #define DBG_SHOW_TYPE_NAME
+// #define DBG_SHOW_FILE_PATH
+#define DBG_MAX_ELEMS 15
 
 #ifdef DBG_SHOW_FILE_PATH
 #define FILE_PATH __FILE__
+#else
+#define FILE_PATH ""
+#endif
+
+#ifdef DBG_SHOW_TYPE_NAME
+#define PRINT_TYPE_NAME(x) cerr<<"( "<<DBG_TYPE_NAME(x)<<" )";
+#else
+#define PRINT_TYPE_NAME(x)
 #endif
 
 #define sdbg(x,i,j)\
     cerr<<"["<<FILE_PATH<<":"; \
     cerr<<__LINE__<<" ("<<__func__<<")] "<<\
     DBG_STRINGIFY(x)<<" = ";dbg::pretty_print(cerr,x,i,j); \
-    cerr<<" ("<<DBG_TYPE_NAME(x)<<")\n";
-
+    PRINT_TYPE_NAME(x) \
+    cerr<<'\n';
 
 #ifndef DBG_MAX_ELEMS
 #define DBG_MAX_ELEMS 10
@@ -828,9 +811,12 @@ class DebugOutput {
       output << ansi(ANSI_EXPRESSION) << *expr << ansi(ANSI_RESET) << " = ";
     }
     output << ansi(ANSI_VALUE) << stream_value.str() << ansi(ANSI_RESET);
+
+#ifdef DBG_SHOW_TYPE_NAME
     if (print_expr_and_type) {
       output << " (" << ansi(ANSI_TYPE) << *type << ansi(ANSI_RESET) << ")";
     }
+#endif
     output << std::endl;
     std::cerr << output.str();
 
