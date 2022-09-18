@@ -19,9 +19,7 @@
 #endif
 
 #define sdbg(x,i,j)\
-    cerr<<"["<<FILE_PATH<<":"; \
-    cerr<<__LINE__<<" ("<<__func__<<")] "<<\
-    DBG_STRINGIFY(x)<<" = ";dbg::pretty_print(cerr,x,i,j); \
+    cerr<< DBG_STRINGIFY(x)<<" = ";dbg::pretty_print(cerr,x,i,j); \
     PRINT_TYPE_NAME(x) \
     cerr<<'\n';
 
@@ -430,7 +428,7 @@ inline bool pretty_print(std::ostream& stream,
 template <typename Container>
 inline typename std::enable_if<detail::is_container<const Container&>::value,
                                bool>::type
-pretty_print(std::ostream& stream, const Container& value);
+pretty_print(std::ostream& stream, const Container& value, size_t first=0, size_t last=0);
 
 // Specializations of "pretty_print"
 
@@ -696,42 +694,16 @@ inline bool pretty_print(std::ostream& stream,
 
 #endif
 
-template <typename Container>
-inline typename std::enable_if<detail::is_container<const Container&>::value,
-                               bool>::type
-pretty_print(std::ostream& stream, const Container& value) {
-  stream << "{";
-  const size_t size = detail::size(value);
-  const size_t n = std::min(size_t{DBG_MAX_ELEMS}, size);
-  size_t i = 0;
-  using std::begin;
-  using std::end;
-  for (auto it = begin(value); it != end(value) && i < n; ++it, ++i) {
-    pretty_print(stream, *it);
-    if (i != n - 1) {
-      stream << ", ";
-    }
-  }
-
-  if (size > n) {
-    stream << ", ...";
-    stream << " size:" << size;
-  }
-
-  stream << "}";
-  return true;
-}
 
 template <typename Container>
 inline typename std::enable_if<detail::is_container<const Container&>::value,
                                bool>::type
-pretty_print(std::ostream& stream, const Container& value, size_t first, size_t last = -1) {
-  stream << "{";
+pretty_print(std::ostream& stream, const Container& value, size_t first, size_t last) {
+  stream << "[ ";
   const size_t size = detail::size(value);
   size_t n = std::min(size_t{DBG_MAX_ELEMS}, size);
-  if(last!=-1) n=std::min(size, last+1);
-  size_t i = 0;
-  if(first!=-1) i = first;
+  if(last!=0) n=std::min(size, last+1);
+  size_t i = first;
   using std::begin;
   using std::end;
   for (auto it = begin(value)+i; it != end(value) && i < n; ++it, ++i) {
@@ -746,10 +718,10 @@ pretty_print(std::ostream& stream, const Container& value, size_t first, size_t 
     stream << " size:" << size;
   }
 
-  stream << "}";
+  stream << " ]";
 
-  if(last >= size){
-      stream << "  ---->  index " << last << " out of bounds\n";
+  if(last > size){
+      stream << "  ---->  index " << last-1 << " out of bounds\n";
   }
   return true;
 }
@@ -771,16 +743,19 @@ class DebugOutput {
  public:
   // Helper alias to avoid obscure type `const char* const*` in signature.
   using expr_t = const char*;
+  bool prefix = 1;
+  bool newline = 1;
 
-  DebugOutput(const char* filepath, int line, const char* function_name)
-      : m_use_colorized_output(isColorizedOutputEnabled()) {
+  DebugOutput(const char* filepath, int line, const char* function_name, bool newline=1, bool prefix=0)
+      : m_use_colorized_output(isColorizedOutputEnabled()), prefix(prefix),newline(newline) {
           std::string path = filepath;
     const std::size_t path_length = path.length();
     if (path_length > MAX_PATH_LENGTH) {
       path = ".." + path.substr(path_length - MAX_PATH_LENGTH, MAX_PATH_LENGTH);
     }
     std::stringstream ss;
-    ss << ansi(ANSI_DEBUG) << "[" << path << ":" << line << " ("
+    if(prefix && newline)
+        ss << ansi(ANSI_DEBUG) << "[" << path << ":" << line << " ("
        << function_name << ")] " << ansi(ANSI_RESET);
     m_location = ss.str();
   }
@@ -807,6 +782,8 @@ class DebugOutput {
 
     std::stringstream output;
     output << m_location;
+    if(!newline)
+        output << "[ ";
     if (print_expr_and_type) {
       output << ansi(ANSI_EXPRESSION) << *expr << ansi(ANSI_RESET) << " = ";
     }
@@ -817,7 +794,10 @@ class DebugOutput {
       output << " (" << ansi(ANSI_TYPE) << *type << ansi(ANSI_RESET) << ")";
     }
 #endif
-    output << std::endl;
+    if(newline)
+        output << std::endl;
+    else
+        output << " ]  ";
     std::cerr << output.str();
 
     return std::forward<T>(value);
@@ -928,6 +908,13 @@ auto identity(T&&, U&&... u) -> last_t<U...> {
   dbg::DebugOutput(FILE_PATH, __LINE__, __func__)    \
       .print({DBG_MAP(DBG_STRINGIFY, __VA_ARGS__)}, \
              {DBG_MAP(DBG_TYPE_NAME, __VA_ARGS__)}, __VA_ARGS__)
+
+#define dbs(...)                                    \
+  dbg::DebugOutput(FILE_PATH, __LINE__, __func__, 0, 0)    \
+      .print({DBG_MAP(DBG_STRINGIFY, __VA_ARGS__)}, \
+             {DBG_MAP(DBG_TYPE_NAME, __VA_ARGS__)}, __VA_ARGS__); \
+             cerr << '\n'
+
 #else
 #define dbg(...) dbg::identity(__VA_ARGS__)
 #endif  // DBG_MACRO_DISABLE
